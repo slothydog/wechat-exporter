@@ -14,5 +14,5 @@ logger.addHandler(NullHandler())
 
 def id_to_digest(user_id):
     m = hashlib.md5()
-    m.update(user_id)
+    m.update(user_id.encode('utf-8'))
     return m.hexdigest()

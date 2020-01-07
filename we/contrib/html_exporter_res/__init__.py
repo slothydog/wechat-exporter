@@ -1,0 +1,1 @@
+name = "we.contrib.html_exporter_res"

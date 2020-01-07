@@ -12,7 +12,7 @@ def main():
     logger.addHandler(logging.StreamHandler())
     logger.setLevel('DEBUG')
 
-    parser = argparse.ArgumentParser(prog='Wechat Explorer')
+    parser = argparse.ArgumentParser(prog='Wechat Exporter')
     subparser = parser.add_subparsers(dest='command', help='sub-command help')
 
     p1 = subparser.add_parser('list_friends', help='list all friends')
@@ -51,14 +51,18 @@ def main():
         wechat = WechatParser(args.path, args.user_id)
         friends = wechat.get_friends()
         for friend in friends:
-            msg = '%s %s(%s)' % (friend['id'], friend['nickname'], friend['remark'])
-            print msg.encode('utf-8')
+            # msg = '%s %s(%s)' % (friend['id'], friend['nickname'], friend['remark'])
+            msg = "{: <20} | {} | {}".format(friend['id'], friend['nickname'], friend['remark'])
+            # print(msg.encode('utf-8'))
+            print(msg)
     elif args.command == 'list_chatrooms':
         wechat = WechatParser(args.path, args.user_id)
         friends = wechat.get_chatrooms()
         for friend in friends:
-            msg = '%s %s' % (friend['id'], friend['nickname'])
-            print msg.encode('utf-8')
+            # msg = '%s %s' % (friend['id'], friend['nickname'])
+            msg = "{: <20} | {}".format(friend['id'], friend['nickname'])
+            # print(msg.encode('utf-8'))
+            print(msg)
     elif args.command == 'get_chatroom_stats':
         wechat = WechatParser(args.path, args.user_id)
         friends = wechat.get_chatroom_friends(args.chatroom_id)
@@ -70,25 +74,25 @@ def main():
 
         counters = stats['counters']
         for k, v in counters.items():
-            print '%s: %s' % (RecordTypeCN[k], v)
+            print('%s: %s' % (RecordTypeCN[k], v))
 
         users_count = stats['users_rank']
-        print '\nTop 50 least talking:'
+        print('\nTop 50 least talking:')
         for i, user in enumerate(users_count[:50], 1):
-            print '%d %s: %s' % (i, id_nicknames.get(user[0]) or u'已退群', user[1])
+            print('%d %s: %s' % (i, id_nicknames.get(user[0]) or u'已退群', user[1]))
 
-        print '\nTop 50 most talking:'
+        print('\nTop 50 most talking:')
         for i, user in enumerate(reversed(users_count[-50:]), 1):
-            print '%d %s: %s' % (i, id_nicknames.get(user[0]) or u'已退群', user[1])
+            print('%d %s: %s' % (i, id_nicknames.get(user[0]) or u'已退群', user[1]))
 
         silent_users = stats['silent_users']
-        print '\nSlient users:'
+        print('\nSlient users:')
         for user_id in silent_users:
-            print '%s %s' % (user_id, id_nicknames.get(user_id) or u'已退群')
+            print('%s %s' % (user_id, id_nicknames.get(user_id) or u'已退群'))
     elif args.command == 'get_chatroom_user_stats':
         from we.contrib.chatroom_analytics import ChatroomAnalytics
         stats = ChatroomAnalytics(args.path, args.user_id, args.chatroom_id, args.start_at, args.end_at)
-        print stats.get_user_stats(args.chatroom_user_id)
+        print(stats.get_user_stats(args.chatroom_user_id))
     elif args.command == 'export_chatroom_records':
         from we.contrib.html_exporter import HTMLExporter
         exporter = HTMLExporter(args.path, args.user_id, args.chatroom_id, args.start_at, args.end_at)
@@ -101,13 +105,15 @@ def main():
         fl = FriendLabel(args.path, args.user_id)
         stats = fl.get_stats()
 
-        print '\nUsers without labels:'
-        for user in stats['non_label_users']:
-            print '%s %s(%s)' % (user['id'], user['nickname'], user['remark'])
-        print '\nUsers with more than 2 labels:'
+        print('\nUsers without labels:')
+        for user in stats['non_label_users']: 
+            print('%s %s(%s)' % (user['id'], user['nickname'], user['remark']))
+        print('\nUsers with more than 2 labels:')
         for user in stats['multi_label_users']:
             label_str = ','.join([labels[label_id] for label_id in user['label_ids']])
-            print '%s %s(%s): %s' % (user['id'], user['nickname'], user['remark'], label_str)
+            print('%s %s(%s): %s' % (user['id'], user['nickname'], user['remark'], label_str))
+    else:
+        parser.print_help()
 
 if __name__ == '__main__':
     main()

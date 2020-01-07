@@ -1,3 +1,4 @@
+#coding=utf-8
 # -*- coding: utf-8 -*-
 
 import os
@@ -70,40 +71,75 @@ class WechatParser(object):
 
         return label_map
 
+    def get_remark_list(self, remark_origin):
+        index = 0
+        remark_list = []
+        while (True):
+            index += 1
+            if (index > len(remark_origin)):
+                break
+            n = ord(chr(remark_origin[index]))
+            index += 1
+            remark_list.append(remark_origin[index:index + n].decode("utf-8"))
+            index += n
+        return remark_list
+
     def get_friends(self):
-        chat_db = self.path + '/%s/DB/MM.sqlite' % self.user_hash
+        chat_db = self.path + '/%s/DB/WCDB_Contact.sqlite' % self.user_hash
         logger.debug('DB path %s' % chat_db)
         conn = sqlite3.connect(chat_db)
 
         friends = []
-        for row in conn.execute('SELECT f.*,fe.ConStrRes2, fe.ConRemark FROM Friend as f JOIN Friend_Ext as fe USING(UsrName) WHERE `Type` NOT IN %s AND `UsrName` NOT LIKE "gh_%%"' % FriendTypeExlude.__str__()):
-            label_pattern = '<LabelList>(.*)</LabelList>'
-            label_list_str = re.search(label_pattern, row[13], re.MULTILINE).group(1)
-            label_list = label_list_str.split(',')
-            label_list = [int(label_id) for label_id in label_list if label_id]
+        for row in conn.execute('SELECT * FROM Friend WHERE `certificationFlag` = 0 AND `type` NOT IN %s AND `userName` NOT LIKE "gh_%%" AND `userName` NOT LIKE "%%@chatroom"' % FriendTypeExlude.__str__()):
+            # label_pattern = '<LabelList>(.*)</LabelList>'
+            # label_list_str = re.search(label_pattern, row[4], re.MULTILINE).group(1)
+            # label_list = label_list_str.split(',')
+            # label_list = [int(label_id) for label_id in label_list if label_id]
 
+            # avatar_pattern = '<HeadImgUrl>(.*)</HeadImgUrl>'
+            # avatar_url = re.search(avatar_pattern, row[8], re.MULTILINE).group(1)
+
+            remark_list = self.get_remark_list(row[8])
+            # 本字段可能有多种存储格式，所以格式暂时并不能统一
+            # 0 昵称
+            # 3 昵称拼音
+            # 1 备注
+            # 2 微信号
+            # 4 备注拼音
+            # 5 备注首字母大写
+            # 6 描述
+            # 7
+
+            # Type 的参考资料
+            # https://www.jianshu.com/p/07a8d87e698b
+
+            label_list = [int(i.encode('utf-8')) for i in remark_list[7].split(',') if i]
             friend = dict(
-                id=row[1],
-                nickname=row[2],
-                gender=row[6],
-                type=row[10],
+                # id=row[0] if len(remark_list) <= 1 or remark_list[1] == u"" else remark_list[2],
+                id=row[15],
+                nickname=remark_list[0],
+                # gender=row[6],
+                type=row[2],
                 label_ids = label_list,
-                remark = row[14],
+                remark = remark_list[1] if len(remark_list) > 1 else "",
+                avatar_url = row[9],
             )
             friends.append(friend)
+            # print row
         return friends
 
     def get_chatrooms(self):
-        chat_db = self.path + '/%s/DB/MM.sqlite' % self.user_hash
+        chat_db = self.path + '/%s/DB/WCDB_Contact.sqlite' % self.user_hash
         logger.debug('DB path %s' % chat_db)
         conn = sqlite3.connect(chat_db)
 
         friends = []
-        for row in conn.execute('SELECT * FROM `Friend` WHERE `UsrName` LIKE "%chatroom"'):
+        for row in conn.execute('SELECT * FROM `Friend` WHERE `userName` LIKE "%chatroom"'):
+            remark_list = self.get_remark_list(row[8])
             friend = dict(
-                id=row[1],
-                nickname=row[2],
-                type=row[10],
+                id=row[15],
+                nickname=remark_list[0],
+                type=row[14],
             )
             friends.append(friend)
         return friends
@@ -117,8 +153,9 @@ class WechatParser(object):
         # GET group users nickname xml file
         c = conn.execute('SELECT * FROM %s WHERE UsrName="%s"' % (group_table, chatroom_id))
         row = c.fetchone()
+        print(row)
         session_path = row[5]
-        full_session_path = self.path + '/%s%s' % (self.user_hash, session_path)
+        full_session_path = self.path + '/%s/%s' % (self.user_hash, session_path)
         logger.debug('Bin path %s' % full_session_path)
 
         f = open(full_session_path, 'r')
@@ -152,7 +189,7 @@ class WechatParser(object):
 
         records = []
         for row in conn.execute("SELECT * FROM %s WHERE CreateTime BETWEEN '%s' and '%s'" % (chatroom_table, start, end)):
-            created_at, msg, msg_type, not_self = row[3], row[4] ,row[7], row[8]
+            created_at, msg, msg_type, not_self = row[0], row[4] ,row[8], row[1]
             user_id = None
 
             # split out user_id in msg

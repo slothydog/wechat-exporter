@@ -2,6 +2,7 @@
 
 import os
 import shutil
+import sys
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -13,28 +14,38 @@ class HTMLExporter(object):
     def __init__(self, path, user_id, chatroom_id, start_at, end_at):
         self.wechat = WechatParser(path, user_id)
         self.records = self.wechat.get_chatroom_records(chatroom_id, start_at, end_at)
-        self.friends = self.wechat.get_chatroom_friends(chatroom_id)
+        self.friends = self.wechat.get_friends()
 
     def export(self, export_path):
         id_nicknames = {friend['id']: friend['nickname'] for friend in self.friends}
         for record in self.records:
             if not record['user_id']:
                 continue
+            record['nickname'] = id_nicknames.get(record['user_id']) or record['user_id']
 
-            record['nickname'] = id_nicknames.get(record['user_id']) or u'已退群'
-
-        env = Environment(loader=FileSystemLoader('we/contrib/html_exporter_res/'))
+        searchpath = [os.path.join(path, 'we/contrib/html_exporter_res') for path in sys.path]
+        env = Environment(loader=FileSystemLoader(searchpath))
         template = env.get_template('wechat.html')
         output_from_parsed_template = template.render(records=self.records)
 
         # make dir
-        export_full_path = os.path.realpath(export_path) + '/records'
-        os.makedirs(export_full_path)
+        export_full_path = os.path.join(os.path.realpath(export_path), 'records')
+        if not os.path.exists(export_full_path):
+            os.makedirs(export_full_path)
 
         # copy res
-        shutil.copytree('we/contrib/html_exporter_res/css', export_full_path+'/css')
-        shutil.copytree('we/contrib/html_exporter_res/img', export_full_path+'/img')
+        # shutil.copytree('we/contrib/html_exporter_res/css', export_full_path+'/css')
+        # shutil.copytree('we/contrib/html_exporter_res/img', export_full_path+'/img')
+        if not os.path.exists(os.path.join(export_full_path, 'css')):
+            for path in searchpath:
+                source = os.path.join(path, 'css')
+                if os.path.exists(source):
+                    # copy res
+                    shutil.copytree(os.path.join(path, 'css'), os.path.join(export_full_path, 'css'))
+                    shutil.copytree(os.path.join(path, 'img'), os.path.join(export_full_path, 'img'))
+                    break
 
         # build records html
-        with open(export_full_path+"/records.html", "w") as fh:
-            fh.write(output_from_parsed_template.encode('utf8'))
+        with open(export_full_path + "/records.html", "w") as fh:
+            # fh.write(output_from_parsed_template.encode('utf8'))
+            fh.write(output_from_parsed_template)

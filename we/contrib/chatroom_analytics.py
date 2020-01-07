@@ -53,4 +53,25 @@ class ChatroomAnalytics(object):
                     silent_users=silent_users)
 
     def get_user_stats(self, user_id):
-        pass
+        # build stats for counters
+        counters = {
+            RecordType.SHORT_VIDEO: 0,
+            RecordType.LINK: 0,
+            RecordType.LOCATIOM: 0,
+            RecordType.EMOTION: 0,
+            RecordType.VIDEO: 0,
+            RecordType.CARD: 0,
+            RecordType.VOICE: 0,
+            RecordType.IMAGE: 0,
+            RecordType.TEXT: 0,
+        }
+
+        msg = []
+        for record in self.records:
+            if record['user_id'] == user_id:
+                try:
+                    counters[record['type']] += 1
+                except KeyError:
+                    continue
+
+        return dict(counters=counters)
