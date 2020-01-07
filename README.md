@@ -28,6 +28,8 @@
 
 其中无规则字串文件夹就是对应不同WXID的微信号(经过MD5 Hash)。
 
+![iMazing](https://raw.githubusercontent.com/Duerxin/wechat-exporter/master/README_Images/iMazing.png)
+
 ### WXID
 获得wxid，目前我没有找到比较简单的方法。
 
